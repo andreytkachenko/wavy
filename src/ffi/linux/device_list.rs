@@ -17,7 +17,7 @@ use std::{
     os::raw::{c_char, c_void},
 };
 
-use fon::chan::{Ch32, Channel};
+use fon::chan::{Ch16, Channel};
 
 use super::{
     free, pcm, Alsa, SndPcmAccess, SndPcmFormat, SndPcmMode, SndPcmStream,
@@ -37,6 +37,9 @@ pub(crate) unsafe fn reset_hwp(
     } else {
         unreachable!()
     };
+
+    let format = SndPcmFormat::S16Le;
+    
     pcm::hw_params_any(pcm, hwp).ok()?;
     pcm::hw_params_set_access(pcm, hwp, SndPcmAccess::RwInterleaved).ok()?;
     pcm::hw_params_set_format(pcm, hwp, format).ok()?;
@@ -219,7 +222,7 @@ fn device_list_internal<D: SoundDevice, F: Fn(D) -> T, T>(
 pub(crate) fn pcm_hw_params(
     device: &AudioDevice,
     channels: u8,
-    buffer: &mut Vec<Ch32>,
+    buffer: &mut Vec<Ch16>,
     sample_rate: &mut Option<f64>,
     period: &mut u16,
 ) -> Option<()> {
@@ -264,7 +267,7 @@ pub(crate) fn pcm_hw_params(
         *period = period_size.try_into().ok()?;
 
         // Resize the buffer
-        buffer.resize(*period as usize * channels as usize, Ch32::MID);
+        buffer.resize(*period as usize * channels as usize, Ch16::MID);
 
         // Empty the audio buffer to avoid artifacts on startup.
         let _ = pcm::drop(device.pcm);

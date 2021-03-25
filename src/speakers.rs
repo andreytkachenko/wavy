@@ -12,7 +12,7 @@
 
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use fon::{chan::Ch32, Frame, Resampler, Sink};
+use fon::{chan::Ch16, Frame, Resampler, Sink};
 
 use crate::ffi;
 
@@ -86,7 +86,7 @@ impl Speakers {
     /// Check is speakers are available to use in a specific configuration
     pub fn supports<F>(&self) -> bool
     where
-        F: Frame<Chan = Ch32>,
+        F: Frame<Chan = Ch16>,
     {
         let count = F::CHAN_COUNT;
         let bit = count - 1;
@@ -96,22 +96,22 @@ impl Speakers {
     /// Play audio through speakers.  Returns an audio sink, which consumes an
     /// audio stream of played samples.  If you don't write to the sink, it will
     /// keep playing whatever was last streamed into it.
-    pub async fn play<F: Frame<Chan = Ch32>>(&mut self) -> SpeakersSink<'_, F> {
+    pub async fn play<F: Frame<Chan = Ch16>>(&mut self) -> SpeakersSink<'_, F> {
         (&mut self.0).await;
         SpeakersSink(self.0.play())
     }
 }
 
 /// A sink that consumes audio samples and plays them through the speakers.
-pub struct SpeakersSink<'a, F: Frame<Chan = Ch32>>(ffi::SpeakersSink<'a, F>);
+pub struct SpeakersSink<'a, F: Frame<Chan = Ch16>>(ffi::SpeakersSink<'a, F>);
 
-impl<F: Frame<Chan = Ch32>> Debug for SpeakersSink<'_, F> {
+impl<F: Frame<Chan = Ch16>> Debug for SpeakersSink<'_, F> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result {
         write!(fmt, "SpeakersSink(rate: {})", self.sample_rate())
     }
 }
 
-impl<F: Frame<Chan = Ch32>> Sink<F> for SpeakersSink<'_, F> {
+impl<F: Frame<Chan = Ch16>> Sink<F> for SpeakersSink<'_, F> {
     fn sample_rate(&self) -> f64 {
         self.0.sample_rate()
     }

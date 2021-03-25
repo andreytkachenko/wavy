@@ -20,8 +20,8 @@ use std::{
 };
 
 use fon::{
-    chan::{Ch32, Channel},
-    surround::Surround32,
+    chan::{Ch16, Channel},
+    stereo::Stereo16,
     Frame, Resampler, Sink,
 };
 
@@ -37,9 +37,9 @@ pub(crate) struct Speakers {
     /// Index into audio frames to start writing.
     starti: usize,
     /// Raw buffer of audio yet to be played.
-    buffer: Vec<Ch32>,
+    buffer: Vec<Ch16>,
     /// Resampler context for speakers sink.
-    resampler: ([Ch32; 6], f64),
+    resampler: ([Ch16; 2], f64),
     /// The number of frames in the buffer.
     period: u16,
     /// Number of available channels
@@ -74,7 +74,7 @@ impl From<AudioDevice> for Speakers {
             buffer: Vec::new(),
             sample_rate: None,
             channels: 0,
-            resampler: ([Ch32::MID; 6], 0.0),
+            resampler: ([Ch16::MID; 2], 0.0),
             period: 0,
         }
     }
@@ -99,7 +99,7 @@ impl Speakers {
     /// Attempt to configure the speaker for a specific number of channels.
     fn set_channels<F>(&mut self) -> Option<bool>
     where
-        F: Frame<Chan = Ch32>,
+        F: Frame<Chan = Ch16>,
     {
         if F::CHAN_COUNT != self.channels.into() {
             if !matches!(F::CHAN_COUNT, 1 | 2 | 6) {
@@ -123,14 +123,14 @@ impl Speakers {
     /// Generate an audio sink for the user to fill.
     pub(crate) fn play<F>(&mut self) -> SpeakersSink<'_, F>
     where
-        F: Frame<Chan = Ch32>,
+        F: Frame<Chan = Ch16>,
     {
         // Change number of channels, if different than last call.
         self.set_channels::<F>()
             .expect("Speaker::play() called with invalid configuration");
         // Convert the resampler to the target speaker configuration.
         let resampler = Resampler::<F>::new(
-            Surround32::from_channels(&self.resampler.0[..]).convert(),
+            Stereo16::from_channels(&self.resampler.0[..]).convert(),
             self.resampler.1,
         );
         // Create a sink that borrows this speaker's buffer mutably.
@@ -254,19 +254,19 @@ impl Future for &mut Speakers {
         this.buffer.drain(..len * this.channels as usize);
         this.starti = this.buffer.len() / this.channels as usize;
         this.buffer
-            .resize(this.period as usize * this.channels as usize, Ch32::MID);
+            .resize(this.period as usize * this.channels as usize, Ch16::MID);
         // Ready for more samples.
         Poll::Ready(())
     }
 }
 
-pub(crate) struct SpeakersSink<'a, F: Frame<Chan = Ch32>>(
+pub(crate) struct SpeakersSink<'a, F: Frame<Chan = Ch16>>(
     &'a mut Speakers,
     Resampler<F>,
     PhantomData<F>,
 );
 
-impl<F: Frame<Chan = Ch32>> Sink<F> for SpeakersSink<'_, F> {
+impl<F: Frame<Chan = Ch16>> Sink<F> for SpeakersSink<'_, F> {
     fn sample_rate(&self) -> f64 {
         self.0.sample_rate.unwrap()
     }
@@ -284,17 +284,13 @@ impl<F: Frame<Chan = Ch32>> Sink<F> for SpeakersSink<'_, F> {
     }
 }
 
-impl<F: Frame<Chan = Ch32>> Drop for SpeakersSink<'_, F> {
+impl<F: Frame<Chan = Ch16>> Drop for SpeakersSink<'_, F> {
     fn drop(&mut self) {
         // Store 5.1 surround sample to resampler.
-        let frame: Surround32 = self.1.frame().convert();
+        let frame: Stereo16 = self.1.frame().convert();
         self.0.resampler.0 = [
             frame.channels()[0],
             frame.channels()[1],
-            frame.channels()[2],
-            frame.channels()[3],
-            frame.channels()[4],
-            frame.channels()[5],
         ];
         // Store partial index from resampler.
         self.0.resampler.1 = self.1.index() % 1.0;

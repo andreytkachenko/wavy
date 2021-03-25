@@ -10,7 +10,7 @@
 
 use std::fmt::{Debug, Display, Formatter, Result};
 
-use fon::{chan::Ch32, Frame, Stream};
+use fon::{chan::Ch16, Frame, Stream};
 
 use crate::ffi;
 
@@ -39,7 +39,7 @@ impl Microphone {
     /// Check is microphone is available to use in a specific configuration
     pub fn supports<F>(&self) -> bool
     where
-        F: Frame<Chan = Ch32>,
+        F: Frame<Chan = Ch16>,
     {
         let count = F::CHAN_COUNT;
         let bit = count - 1;
@@ -48,7 +48,7 @@ impl Microphone {
 
     /// Record audio from connected microphone.  Returns an audio stream, which
     /// contains the samples recorded since the previous call.
-    pub async fn record<F: Frame<Chan = Ch32>>(
+    pub async fn record<F: Frame<Chan = Ch16>>(
         &mut self,
     ) -> MicrophoneStream<'_, F> {
         (&mut self.0).await;
@@ -57,17 +57,17 @@ impl Microphone {
 }
 
 /// A stream of recorded audio samples from a microphone.
-pub struct MicrophoneStream<'a, F: Frame<Chan = Ch32>>(
+pub struct MicrophoneStream<'a, F: Frame<Chan = Ch16>>(
     ffi::MicrophoneStream<'a, F>,
 );
 
-impl<F: Frame<Chan = Ch32>> Debug for MicrophoneStream<'_, F> {
+impl<F: Frame<Chan = Ch16>> Debug for MicrophoneStream<'_, F> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> Result {
         write!(fmt, "MicrophoneStream(rate: {:?})", self.sample_rate())
     }
 }
 
-impl<F: Frame<Chan = Ch32>> Iterator for MicrophoneStream<'_, F> {
+impl<F: Frame<Chan = Ch16>> Iterator for MicrophoneStream<'_, F> {
     type Item = F;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -75,7 +75,7 @@ impl<F: Frame<Chan = Ch32>> Iterator for MicrophoneStream<'_, F> {
     }
 }
 
-impl<F: Frame<Chan = Ch32>> Stream<F> for MicrophoneStream<'_, F> {
+impl<F: Frame<Chan = Ch16>> Stream<F> for MicrophoneStream<'_, F> {
     fn sample_rate(&self) -> Option<f64> {
         self.0.sample_rate()
     }

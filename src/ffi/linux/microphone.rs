@@ -19,7 +19,7 @@ use std::{
     task::{Context, Poll},
 };
 
-use fon::{chan::Ch32, Frame, Stream};
+use fon::{chan::Ch16, Frame, Stream};
 
 use super::{
     asound, pcm_hw_params, AudioDevice, SndPcmState, SndPcmStream, SoundDevice,
@@ -30,7 +30,7 @@ pub(crate) struct Microphone {
     // PCM I/O Handle
     device: AudioDevice,
     // Interleaved Audio Buffer.
-    buffer: Vec<Ch32>,
+    buffer: Vec<Ch16>,
     // The period of the microphone.
     period: u16,
     // Index to stop reading.
@@ -91,7 +91,7 @@ impl Microphone {
     /// Attempt to configure the microphone for a specific number of channels.
     fn set_channels<F>(&mut self) -> Option<bool>
     where
-        F: Frame<Chan = Ch32>,
+        F: Frame<Chan = Ch16>,
     {
         if F::CHAN_COUNT != self.channels.into() {
             if !matches!(F::CHAN_COUNT, 1 | 2 | 6) {
@@ -112,7 +112,7 @@ impl Microphone {
         }
     }
 
-    pub(crate) fn record<F: Frame<Chan = Ch32>>(
+    pub(crate) fn record<F: Frame<Chan = Ch16>>(
         &mut self,
     ) -> MicrophoneStream<'_, F> {
         // Change number of channels, if different than last call.
@@ -226,13 +226,13 @@ impl Future for Microphone {
     }
 }
 
-pub(crate) struct MicrophoneStream<'a, F: Frame<Chan = Ch32>>(
+pub(crate) struct MicrophoneStream<'a, F: Frame<Chan = Ch16>>(
     &'a mut Microphone,
     usize,
     PhantomData<F>,
 );
 
-impl<F: Frame<Chan = Ch32>> Iterator for MicrophoneStream<'_, F> {
+impl<F: Frame<Chan = Ch16>> Iterator for MicrophoneStream<'_, F> {
     type Item = F;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -247,7 +247,7 @@ impl<F: Frame<Chan = Ch32>> Iterator for MicrophoneStream<'_, F> {
     }
 }
 
-impl<F: Frame<Chan = Ch32>> Stream<F> for MicrophoneStream<'_, F> {
+impl<F: Frame<Chan = Ch16>> Stream<F> for MicrophoneStream<'_, F> {
     fn sample_rate(&self) -> Option<f64> {
         self.0.sample_rate
     }
